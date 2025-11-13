@@ -1,0 +1,626 @@
+{
+  "name": "Telegram spotkania automatyzacja",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        160
+      ],
+      "id": "12eafc88-f45e-4555-b40b-af3590028a82",
+      "webhookId": "3bb78b29-c60b-476a-86bf-1b16fea69921",
+      "credentials": {
+        "telegramApi": {
+          "id": "tORIwelX7A0USz1R",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{$json[\"odpowiedz\"]}}",
+        "additionalFields": {}
+      },
+      "name": "Telegram Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        496,
+        160
+      ],
+      "id": "60474108-9a0c-4649-b5ca-acb6af291e41",
+      "webhookId": "3ec45d66-108d-45f7-8a11-9307d47413dd",
+      "credentials": {
+        "telegramApi": {
+          "id": "tORIwelX7A0USz1R",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "acbc7f86-f79d-4e4b-83e7-601f0de7f108",
+              "leftValue": "={{ $('obsługa telegrama').item.json.zapiszDoSheets }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        704,
+        160
+      ],
+      "id": "17b38391-57c2-47e3-955f-6747bdb06e71",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "tarasbabko01@gmail.com",
+          "mode": "list",
+          "cachedResultName": "tarasbabko01@gmail.com"
+        },
+        "start": "={{ $json.dataSpotkania }}",
+        "end": "={{ new Date(new Date($json[\"dataSpotkania\"]).getTime() + 2*60*60*1000).toISOString() }}",
+        "additionalFields": {
+          "description": "={{ $('obsługa telegrama').item.json.opisWydarzenia }}",
+          "summary": "Spotkanie"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        160
+      ],
+      "id": "65332b00-7cb6-4535-835e-a960a5f8d740",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "mcXB7NXTsibL4u7Y",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const opis = item.json.description || '';\n  const numer = opis.match(/\\+?\\d{9,15}/);\n  const email = opis.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/);\n  const imie = opis.match(/imie:\\s*(.+)/i);\n  \n  item.json.clientimie = imie ? imie[1].trim() : null;\n  item.json.clientnumer = numer ? numer[0] : null;\n  item.json.clientemail = email ? email[0] : null;\n  \n  const dataSpotkania = new Date(item.json.start.dateTime || item.json.start.date);\n  dataSpotkania.setHours(dataSpotkania.getHours() + 1);\n  const now = new Date();\n  const czasSpotkania = new Date(dataSpotkania).toTimeString().slice(0,5);\n  const godzDoSpotkania = (dataSpotkania - now) / (1000 * 60 * 60);\n  item.json.godzDoSpotkania = parseFloat(godzDoSpotkania.toFixed(2));\n  item.json.czasSpotkania = czasSpotkania; \n  item.json.dataSpotkania = dataSpotkania;\n   return item;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        400
+      ],
+      "id": "c0664bec-fdc3-458f-b6b0-b0d271e36b0b",
+      "name": "sprawdzenie czasu do spotkania"
+    },
+    {
+      "parameters": {
+        "chatId": "697307913",
+        "text": "=Za dzień jest spotkanie z {{ $('sprawdzenie czasu do spotkania').item.json.clientimie }} o {{ $('sprawdzenie czasu do spotkania').item.json.czasSpotkania }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        320
+      ],
+      "id": "48912c3b-e0d6-43fa-8d77-f4cae630402d",
+      "name": "Wysyłanie sobie przypomnienia",
+      "webhookId": "e8af83b4-f331-4abb-9486-7a68038e60b9",
+      "credentials": {
+        "telegramApi": {
+          "id": "tORIwelX7A0USz1R",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "tarasbabko@gmail.com",
+        "toEmail": "={{ $('sprawdzenie czasu do spotkania').item.json.clientemail }}",
+        "subject": "zaproszenie ",
+        "emailFormat": "text",
+        "text": "=Dzień dobry ,{{$json.clientimie }}\nPrzypominamy o spotkaniu za dzień o {{ $('sprawdzenie czasu do spotkania').item.json.czasSpotkania }}.\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        752,
+        320
+      ],
+      "id": "b61a0b17-e785-404d-bcd5-ad6dd1899e6e",
+      "name": "przypomnienie za dzień klientowi",
+      "webhookId": "b3315a6a-a487-4eaa-af20-0a7b152d0d18",
+      "credentials": {
+        "smtp": {
+          "id": "1eoyzyUer9Aie4bv",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "tarasbabko@gmail.com",
+        "toEmail": "={{ $('sprawdzenie czasu do spotkania').item.json.clientemail }}",
+        "subject": "przypomnienie",
+        "emailFormat": "text",
+        "text": "=Dzień dobry ,{{$json.clientimie }}\nprzypominam o spotkaniu za godzinę o {{ $('sprawdzenie czasu do spotkania').item.json.czasSpotkania }}.\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        528
+      ],
+      "id": "12122e6d-9ce7-4fb3-8435-64a7ee4434ad",
+      "name": "przypomnienie za godzine",
+      "webhookId": "b3315a6a-a487-4eaa-af20-0a7b152d0d18",
+      "credentials": {
+        "smtp": {
+          "id": "1eoyzyUer9Aie4bv",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "697307913",
+        "text": "=Za godzinę jest spotkanie z {{ $('sprawdzenie czasu do spotkania').item.json.clientimie }} o {{ $('sprawdzenie czasu do spotkania').item.json.czasSpotkania }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        528
+      ],
+      "id": "697bd2fe-e59d-4a1b-b887-cdd552a641ee",
+      "name": "Wysyłanie sobie przypomnienia za godzinę",
+      "webhookId": "e8af83b4-f331-4abb-9486-7a68038e60b9",
+      "credentials": {
+        "telegramApi": {
+          "id": "tORIwelX7A0USz1R",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "30160020-252f-4bc0-80f2-43275d21686c",
+              "leftValue": "={{ $json.godzDoSpotkania }}",
+              "rightValue": 23,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "1925379c-39bc-415d-957b-deed4f737643",
+              "leftValue": "={{ $json.godzDoSpotkania }}",
+              "rightValue": 24,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        544,
+        400
+      ],
+      "id": "0ebfd21b-d171-4a4f-ba27-068701bc2f96",
+      "name": "sprawdzenie za dzień"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "97b8c0c9-a32a-42bc-b438-82559e6ef0fc",
+              "leftValue": "={{ $json.godzDoSpotkania }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        528
+      ],
+      "id": "25a018a9-af64-438a-940f-cb4b8a844b24",
+      "name": "sprawdzenie za godzinę"
+    },
+    {
+      "parameters": {
+        "functionCode": "return items.map(item => {\n    const chatId = item.json.message?.chat?.id;\n    const text = item.json.message?.text?.trim() || '';\n\n    if (!chatId) {\n        return { json: { chatId: null, odpowiedz: 'Nie mogę znaleźć ID czatu', zapiszDoSheets: false } };\n    }\n\n    if (text === '/start') {\n        return { json: { chatId, odpowiedz: 'Wpisz dane w formacie: imie nazwisko;numer telefonu;email;rrrr-mm-dd HH:MM', zapiszDoSheets: false } };\n    }\n\n    const parts = text.split(';');\n    if (parts.length !== 4) {\n        return { json: { chatId, odpowiedz: 'Niepoprawny format. Użyj: imie nazwisko;numer telefonu;email;rrrr-mm-dd HH:MM', zapiszDoSheets: false } };\n    }\n\n    const namePart = parts[0].trim().split(' ');\n    if (namePart.length < 2) {\n        return { json: { chatId, odpowiedz: 'Podaj imię i nazwisko przed resztą danych.', zapiszDoSheets: false } };\n    }\n\n    const imie = namePart[0];\n    const nazwisko = namePart[1];\n    const telefon = parts[1].trim();\n    const email = parts[2].trim();\n    const dataInput = parts[3].trim();\n\n    const regexTelefon = /^\\+?\\d{9,15}$/;\n    const regexEmail = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$/;\n\n    if (!regexTelefon.test(telefon)) {\n        return { json: { chatId, odpowiedz: 'Nieprawidłowy numer telefonu.', zapiszDoSheets: false } };\n    }\n    if (!regexEmail.test(email)) {\n        return { json: { chatId, odpowiedz: 'Nieprawidłowy email.', zapiszDoSheets: false } };\n    }\n\n    // Конвертируем дату в ISO для Google Calendar\n    const dataSpotkania = new Date(dataInput.replace(' ', 'T'));\n    if (isNaN(dataSpotkania.getTime())) {\n        return { json: { chatId, odpowiedz: 'Nieprawidłowa data. Użyj formatu rrrr-mm-dd HH:MM', zapiszDoSheets: false } };\n    }\n    const dataISO = dataSpotkania.toISOString();\n\n    // Формируем описание события\n    const opisWydarzenia = `imie: ${imie}\\nnazwisko: ${nazwisko}\\nTel: ${telefon}\\nEmail: ${email}`;\n\n    return {\n        json: {\n            chatId,\n            odpowiedz: `Dziękujemy! Zapisano dane:\\nImię: ${imie}\\nNazwisko: ${nazwisko}\\nTelefon: ${telefon}\\nEmail: ${email}\\nData spotkania: ${dataISO}`,\n            imie,\n            nazwisko,\n            telefon,\n            email,\n            dataSpotkania: dataISO,\n            opisWydarzenia,\n            zapiszDoSheets: true\n        }\n    };\n});\n"
+      },
+      "name": "obsługa telegrama",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        240,
+        160
+      ],
+      "id": "1dba0f06-5883-4851-9ac8-bdc810269a1e"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ct1CSjtHfxLEBdlvvIC7HnuyKibAyNvPTO3b4r_qy2Q",
+          "mode": "list",
+          "cachedResultName": "clientsData",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ct1CSjtHfxLEBdlvvIC7HnuyKibAyNvPTO3b4r_qy2Q/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "dane",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ct1CSjtHfxLEBdlvvIC7HnuyKibAyNvPTO3b4r_qy2Q/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "imie": "={{ $('obsługa telegrama').item.json.imie }}",
+            "nazwisko": "={{ $('obsługa telegrama').item.json.nazwisko }}",
+            "numerTelefonu": "={{ $('obsługa telegrama').item.json.telefon }}",
+            "email": "={{ $('obsługa telegrama').item.json.email }}",
+            "ChatId": "={{ $json.result.from.id }}",
+            "dataSpotkania": "={{ $('obsługa telegrama').item.json.dataSpotkania }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ChatId",
+              "displayName": "ChatId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "imie",
+              "displayName": "imie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nazwisko",
+              "displayName": "nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "numerTelefonu",
+              "displayName": "numerTelefonu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dataSpotkania",
+              "displayName": "dataSpotkania",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        928,
+        160
+      ],
+      "id": "6058f94c-f785-40e8-acbd-0925842e7fb4",
+      "name": "dodanie do talbicy",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "VqpaNxo2J5wj2WWC",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "tarasbabko01@gmail.com",
+          "mode": "list",
+          "cachedResultName": "tarasbabko01@gmail.com"
+        },
+        "returnAll": true,
+        "timeMax": "=={{ new Date(Date.now() + 1000 * 60 * 60 * 25) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        400
+      ],
+      "id": "d3326e4c-f00d-409c-8671-f949911c4099",
+      "name": "wszystkie spotkania",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "mcXB7NXTsibL4u7Y",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        400
+      ],
+      "id": "a7d86506-82d5-4969-bf33-3a85c414a86b",
+      "name": "Schedule Trigger1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "obsługa telegrama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Send Message": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "dodanie do talbicy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sprawdzenie czasu do spotkania": {
+      "main": [
+        [
+          {
+            "node": "sprawdzenie za dzień",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "przypomnienie za dzień klientowi": {
+      "main": [
+        [
+          {
+            "node": "Wysyłanie sobie przypomnienia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "przypomnienie za godzine": {
+      "main": [
+        [
+          {
+            "node": "Wysyłanie sobie przypomnienia za godzinę",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sprawdzenie za dzień": {
+      "main": [
+        [
+          {
+            "node": "przypomnienie za dzień klientowi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sprawdzenie za godzinę",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sprawdzenie za godzinę": {
+      "main": [
+        [
+          {
+            "node": "przypomnienie za godzine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obsługa telegrama": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dodanie do talbicy": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wszystkie spotkania": {
+      "main": [
+        [
+          {
+            "node": "sprawdzenie czasu do spotkania",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "wszystkie spotkania",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7d0a1482-d791-4ba4-b5a8-1123e160efaf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fe79fb2a91e4f7e430b227920fadbddf99d75746f812ac52d32c3afceb44e46e"
+  },
+  "id": "OHUO6T9nIwiksFee",
+  "tags": []
+}
